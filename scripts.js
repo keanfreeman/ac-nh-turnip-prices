@@ -522,25 +522,45 @@ function* generate_possibilities(sell_prices) {
   yield* generate_pattern_3(sell_prices);
 }
 
-$(document).on("input", function() {
-  // Update output on any input change
-
-  var buy_price = parseInt($("#buy").val());
-
-  var sell_prices = [buy_price, buy_price];
-  for (var i = 2; i < 14; i++) {
-    sell_prices.push(parseInt($("#sell_" + i).val()));
-  }
-
-  var output_possibilities = "";
-  for (let poss of generate_possibilities(sell_prices)) {
-    var out_line = "<tr><td>" + poss.pattern_description + "</td>"
-    for (let day of [...poss.prices].slice(2)) {
-      out_line += "<td>" + day.min + ".." + day.max + "</td>"
+function findPriceRanges(sheet_grid) {
+  var possibilities = []
+  
+  for (const row of sheet_grid) {
+    // parse row
+    const name = row[0]
+    const buy_price = row[1]
+    if (typeof buy_price !== 'number') {
+      possibilities.push([name, 'no buy price provided'])
+      continue
     }
-    out_line += "</tr>"
-    output_possibilities += out_line
+    sell_prices = row.slice(2)
+    
+    // format for generate_possibilities
+    var temp = [buy_price, buy_price]
+    for (const price of sell_prices) {
+      temp.push(parseInt(price))
+    }
+    sell_prices = temp
+    
+    // create some rows of predictions
+    possibilities.push([name])
+    let found_possibility = false
+    for (let poss of generate_possibilities(sell_prices)) {
+      found_possibility = true
+ 
+      // add empty column at beginning for readability
+      let new_row = ['']
+      new_row.push(poss.pattern_description)
+      for (let day of [...poss.prices].slice(2)) {
+        new_row.push(`${day.min}-${day.max}`)
+      }
+      possibilities.push(new_row)
+    }
+    
+    if (!found_possibility) {
+      possibilities.push(['Found no possibilities from data. Is your data correct?'])
+    }
   }
-
-  $("#output").html(output_possibilities)
-})
+  
+  return possibilities;
+}
